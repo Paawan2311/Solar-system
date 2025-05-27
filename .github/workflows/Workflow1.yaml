@@ -1,0 +1,77 @@
+name: For CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      complete_tag:
+        description: 'Complete tag for the build'
+        required: true
+        type: string
+
+jobs:
+  unit-test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run test cases
+        run: npm test
+
+      - name: Store test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Run code coverage (non-blocking)
+        run: |
+          npm run coverage || echo "Coverage failed ..."
+
+  containerization:
+    name: Containerization
+    needs: unit-test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Login to Artifactory
+        uses: docker/login-action@v2
+        with:
+          registry: docker.io
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ inputs.complete_tag }} .
+
+          
+      - name: Push Docker image to Artifactory
+        run: |
+          docker push ${{ inputs.complete_tag }}
