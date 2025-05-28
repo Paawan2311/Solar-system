@@ -1,16 +1,55 @@
-name: For CI  # Name of the workflow
+name: For CI
 
 on:
   workflow_dispatch:
     inputs:
       complete_tag:
-        description: 'Complete tag for the build (e.g., yourusername/app:latest)'
+        description: 'Complete tag for the build'
         required: true
-        type: string  # This must include your Docker Hub username!
+        type: string
 
 jobs:
+  unit-test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run test cases
+        run: npm test
+
+      - name: Store test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Run code coverage (non-blocking)
+        run: |
+          npm run coverage || echo "Coverage failed ..."
+
   containerization:
     name: Containerization
+    needs: unit-test
     runs-on: ubuntu-latest
 
     permissions:
@@ -18,30 +57,20 @@ jobs:
       packages: write
 
     steps:
-      # Step 1: Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Login to Docker Hub
-      - name: Login to Docker Hub
+      - name: Login to Artifactory
         uses: docker/login-action@v2
         with:
           registry: docker.io
-          username: ${{ secrets.DOCKER_USERNAME }}  # Set this in repo secrets
-          password: ${{ secrets.DOCKER_PASSWORD }}  # Set this in repo secrets
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Step 3: Build the Docker image with the full tag (e.g., yourusername/app:latest)
       - name: Build Docker image
         run: |
           docker build -t ${{ inputs.complete_tag }} .
 
-      # Step 4: Push the image to Docker Hub
-      - name: Push Docker image to Docker Hub
+      - name: Push Docker image to Artifactory
         run: |
           docker push ${{ inputs.complete_tag }}
-
-      # Optional Step 5: (If you want to run the container securely using secrets)
-      # Uncomment this if needed:
-      # - name: Run Docker container with secret (optional)
-      #   run: |
-      #     docker run -e MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }} ${{ inputs.complete_tag }}
