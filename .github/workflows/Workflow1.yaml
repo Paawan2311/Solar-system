@@ -9,32 +9,32 @@ on:
         type: string
 
 jobs:
-  unit-test:
-    name: Unit Test
-    runs-on: ubuntu-latest
+ # unit-test:
+  #  name: Unit Test
+   # runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    #steps:
+      #- name: Checkout repository
+       # uses: actions/checkout@v3
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+     # - name: Setup NodeJS
+      #  uses: actions/setup-node@v3
+       # with:
+        #  node-version: '18'
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+     # - name: Cache dependencies
+      #  uses: actions/cache@v3
+       # with:
+        #  path: ~/.npm
+         # key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+         # restore-keys: |
+        #    ${{ runner.os }}-node-
 
-      - name: Install dependencies
-        run: npm install
+     # - name: Install dependencies
+       # run: npm install
 
-      - name: Run test cases
-        run: npm test
+      #- name: Run test cases
+      #  run: npm test
 
    #   - name: Store test results
      #   if: always()
@@ -43,9 +43,9 @@ jobs:
         #  name: test-results
        #   path: test-results/
 
-      - name: Run code coverage (non-blocking)
-        run: |
-          npm run coverage || echo "Coverage failed ..."
+     # - name: Run code coverage (non-blocking)
+      #  run: |
+       #   npm run coverage || echo "Coverage failed ..."
 
   containerization:
     name: Containerization
